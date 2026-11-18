@@ -42,8 +42,8 @@ def sh(*cmd: str, timeout: float = 60) -> tuple[int, str]:
 class Item:
     """DoD หนึ่งข้อ: ชื่อ เกณฑ์ย่อย (ผ่าน/ไม่ผ่าน/เตือน) และรายละเอียดเพิ่ม"""
 
-    def __init__(self, no: int, title: str, meaning: str) -> None:
-        self.no, self.title, self.meaning = no, title, meaning
+    def __init__(self, no: int, title: str, meaning: str, kind: str = "DoD") -> None:
+        self.no, self.title, self.meaning, self.kind = no, title, meaning, kind
         self.checks: list[tuple[str, str, str]] = []
         self.extra: list[str] = []      # บรรทัด markdown เพิ่มเติม (ตาราง ผล test)
         self.info: list[str] = []
@@ -57,7 +57,7 @@ class Item:
 
     def print(self) -> None:
         bar = "═" * 64
-        print(f"\n{bar}\nDoD ข้อที่ {self.no}: {self.title}\n  หมายถึง: {self.meaning}\n{bar}")
+        print(f"\n{bar}\n{self.kind} ข้อที่ {self.no}: {self.title}\n  หมายถึง: {self.meaning}\n{bar}")
         for line in self.info:
             print(f"  {line}")
         for i, (m, label, detail) in enumerate(self.checks, 1):
@@ -65,7 +65,7 @@ class Item:
         print(f"  ผลข้อที่ {self.no}: {'✅ ผ่าน' if self.result == 'PASS' else '❌ ไม่ผ่าน'}", flush=True)
 
     def markdown(self) -> list[str]:
-        out = [f"## DoD ข้อที่ {self.no}: {self.title} — {'✅ ผ่าน' if self.result == 'PASS' else '❌ ไม่ผ่าน'}",
+        out = [f"## {self.kind} ข้อที่ {self.no}: {self.title} — {'✅ ผ่าน' if self.result == 'PASS' else '❌ ไม่ผ่าน'}",
                f"_หมายถึง: {self.meaning}_", ""]
         out += [f"- {line}" for line in self.info]
         out += ["", "| ข้อย่อย | เกณฑ์ | ผล | รายละเอียด |", "|---|---|---|---|"]
