@@ -86,7 +86,8 @@ def analyse(g: dict) -> tuple[list[str], dict[str, dict]]:
 
 def item1(g: dict, expected: list[str], per: dict) -> tuple[Item, list[str]]:
     it = Item(1, "นับ event ใน decisions.jsonl ครบทุกรอบ",
-              "ทุกรอบ (P1, R1–R8) มี offers_sent (ส่งข้อเสนอ) และ round_summary (ผลรอบ) ไม่มีรอบไหนหายไป")
+              "เปิด logs/decisions.jsonl แล้วนับ event ตามตัวเลข ดูว่าครบทุกรอบ ไม่มีรอบไหนหายไป "
+              "(ทุกรอบ P1, R1–R8 ต้องมี offers_sent และ round_summary)")
     counts = Counter(e["event"] for e in g["events"])
     it.info.append("จำนวน event ทั้งเกม: " + " · ".join(f"{k} {v}" for k, v in counts.most_common()))
     missing_sent = [r for r in expected if not per[r]["sent"] and not per[r]["already"]]
@@ -126,7 +127,8 @@ def item1(g: dict, expected: list[str], per: dict) -> tuple[Item, list[str]]:
 
 def item2(g: dict, expected: list[str], per: dict, missing: list[str], consoles: list[str]) -> Item:
     it = Item(2, "ค้นคำที่บอกปัญหาใน log ไม่เจอ/ไม่เกินเกณฑ์",
-              "ค้นคำในตาราง ต้องไม่เกินเกณฑ์ · ถ้าเจอ state_error ดูเวลาว่าทำให้รอบไหนไม่ได้ส่งข้อเสนอไหม")
+              "ค้นคำเหล่านี้ใน log ต้องไม่เจอ หรือเจอไม่เกินเกณฑ์ ถ้าเจอ state_error "
+              "ให้ดูเวลาว่ามีรอบไหนที่ไม่ได้ส่งข้อเสนอเพราะเหตุนี้หรือไม่")
     lines = [json.dumps(e, ensure_ascii=False) for e in g["events"]]
     for word, limit, meaning in WORDS:
         hits = [l for l in lines if word in l]
@@ -229,8 +231,9 @@ def find_agents(hosts: list[str]) -> tuple[list[str], list[str]]:
 
 def item3(g: dict, expected: list[str], per: dict, env_path: Path, offline: bool, hosts: list[str]) -> Item:
     it = Item(3, "ข้อเสนอตรงกับตลาด · LLM ถูกตัว · ไม่มี agent รันซ้อน",
-              "my_offers จาก GET /v1/results ตรงกับ offers_sent ใน log ทุกรอบ · .env ชี้ LLM ที่ถูกต้อง (ไม่ดู key) "
-              "· ไม่มี main.py รันอยู่บนเครื่องอื่น (Pi, เครื่องเพื่อน)")
+              "เทียบ my_offers ในผลแต่ละรอบ (GET /v1/results?round=Rx) กับ offers_sent ใน log ให้ตรงกันทุกรอบ "
+              "เปิด .env ดู LLM_BASE_URL / LLM_MODEL โดยไม่เปิดดูค่า key "
+              "ตรวจว่าเครื่องอื่น (Pi, เครื่องเพื่อน) ไม่มี main.py รันอยู่ด้วย pgrep -fl main.py")
     env = read_env(env_path)
 
     # 3.1 เทียบข้อเสนอ
