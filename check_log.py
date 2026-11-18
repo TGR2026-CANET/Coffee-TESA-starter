@@ -51,11 +51,14 @@ def split_games(rows: list[dict]) -> list[dict]:
             continue
         if ev == "new_game":
             gid = row.get("game_id")
+            # ตลาดแข่งไม่มี game_id: ใช้ชุดล็อต + ค่า TV ที่ประเมิน (มาจากผลวัดตัวอย่าง) แยกเกม
+            key = gid if gid is not None else (row.get("market"), row.get("kg"),
+                                                json.dumps(row.get("tv"), sort_keys=True))
             restart, opened = opened, False
-            if games and gid is not None and games[-1]["id"] == gid:
+            if games and games[-1]["key"] == key:
                 games[-1]["starts"] += restart    # agent เปิดใหม่ในเกมเดิม
                 continue
-            games.append({"id": gid if gid is not None else f"#{len(games) + 1}", "market": row.get("market"),
+            games.append({"key": key, "id": gid if gid is not None else f"#{len(games) + 1}", "market": row.get("market"),
                           "kg": row.get("kg") or 0, "time": row["time"], "cal": cal, "events": [],
                           "closed": False, "starts": 1})
             continue
