@@ -1,11 +1,14 @@
-"""Small client for the market REST API: auth, retries, 429 back-off, readable errors."""
+"""Client ของตลาด REST v1: ใส่ key ลองใหม่ รอเมื่อเจอ 429 แปลง error ให้อ่านง่าย
+
+endpoint ทั้งหมดอยู่ใน คู่มือ-API.md · ทุก path ขึ้นต้นด้วย /v1
+"""
 import time
 
 import httpx
 
 
 class MarketError(Exception):
-    """An error the market returned: {"error": {code, message, field, hint, allowed}}."""
+    """error ที่ตลาดตอบ: {"error": {code, message, field, hint, allowed}}"""
 
     def __init__(self, status: int, body: dict):
         err = body.get("error", {}) if isinstance(body, dict) else {}
@@ -20,24 +23,27 @@ class MarketError(Exception):
 class Market:
     def __init__(self, base_url: str, key: str, timeout: float = 10.0):
         self.http = httpx.Client(base_url=base_url.rstrip("/"), timeout=timeout,
-                                 headers={"Authorization": f"Bearer {key}", "User-Agent": "coffee-starter/1.0"})
+                                 headers={"Authorization": f"Bearer {key}", "User-Agent": "coffee-starter/2.0"})
 
     def call(self, method: str, path: str, json=None, params=None, tries: int = 4):
         for attempt in range(tries):
             try:
                 r = self.http.request(method, path, json=json, params=params)
-            except httpx.TransportError:            # server busy or network blip: wait and retry
+            except httpx.TransportError:            # เครือข่ายสะดุด รอแล้วลองใหม่
                 if attempt == tries - 1:
                     raise
                 time.sleep(1 + attempt)
                 continue
-            if r.status_code == 429 or r.status_code >= 500:
+            if r.status_code == 429 or r.status_code >= 500:   # 429 = เกิน 5 ครั้ง/วินาที รอตามที่ตลาดบอก
                 if attempt == tries - 1:
                     break
                 time.sleep(float(r.headers.get("Retry-After", 1 + attempt)))
                 continue
             break
-        body = r.json() if r.content else {}
+        try:
+            body = r.json() if r.content else {}
+        except ValueError:
+            body = {"error": {"code": f"HTTP_{r.status_code}", "message": r.text[:200]}}
         if r.status_code >= 400:
             raise MarketError(r.status_code, body)
         return body
@@ -56,3 +62,7 @@ class Market:
 
     def offer(self, o: dict) -> dict:
         return self.call("POST", "/v1/offers", json=o)
+
+    def reveal(self) -> dict:
+        """ตลาดฝึกเท่านั้น หลังปิดตลาด: คุณภาพจริง TV จริง และคะแนน"""
+        return self.call("GET", "/v1/sandbox/reveal", tries=1)

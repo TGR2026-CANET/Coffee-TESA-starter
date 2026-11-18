@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python -c \"import httpx, openai; print\\(httpx.__version__, openai.__version__\\)\")",
+      "Edit(/.claude/skills/coffee-auction-seller/**)"
+    ]
+  }
+}
